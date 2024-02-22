@@ -180,11 +180,11 @@ That first page gives us several logins:
  
 On the first page there's a post called **Probleme Login ?** by **lmezard**. Sounds interesting. Looking closely, we see this : ```Oct 5 08:45:29 BornToSecHackMe sshd[7547]: Failed password for invalid user !q\]Ej?*5K5cy*AJ from 161.202.39.38 port 57764 ssh2```.  The end of the line mention ssh daemon, let's try to connect through ssh with the credentials we've just found. Unfortunately it doesn't work. However those credentials give us access to the account of lmezard.
 
-#### **Step 2 - lmezard account**
+#### **Step 3 - lmezard account**
  
 Once connected to the forum with the following credentials `lmezard | !q\]Ej?*5K5cy*AJ` we can access the user area, where we discover the email address (an thus the first name) of lmezard **laurie@borntosec.net**.
 
-#### **Step 3 - laurie email account**
+#### **Step 4 - laurie email account**
 
 Since we got an email, we can visit **/webmail** and try to access the account of laurie with the password we found on the forum. Luckily it works. Reading her email, we find this: 
 
@@ -201,7 +201,7 @@ Best regards.
 ```
 This email is pretty useful as it contains credentials to access the database: `root | Fg-'kKXBj87E:aJ$`
 
-#### **Step 4 - /phpmyadmin**
+#### **Step 5 - /phpmyadmin**
 
 Once connected on php my admin, we have access to the database, we can modify it, delete or even add thing. We could try to change the password of the admin in order to try to login on his user area on the forum. To do so we can go to the  `forum_db -> mlf2_userdata`, and edit **admin**. Password are hashed, let's hash (md5) a password of our choice, and try to connect on the forum. The hash of `adminpwd` is `0a14de5a76e5e14758b04c209f266726`. We change the current hash by this new one, and connect to the admin account. We now have access to a bunch of new functionalities. Unfortunately none of them will be useful except maybe the email listing of the registered users.
 - admin@borntosec.net
@@ -211,7 +211,7 @@ Once connected on php my admin, we have access to the database, we can modify it
 - laurie@borntosec.net
 - zaz@borntosec.net 
 
-#### **Step 5 - Backdoor webshell**
+#### **Step 6 - Backdoor webshell**
 
 MySQL database can sometimes being vulnerable to SQL Injection to execute arbitrary commands. 
 	
@@ -275,7 +275,7 @@ We notice that we have a file called **password**, cat it.
 
 The content of **password** is finally displayed. We got `lmezard:G!@M6f4Eatau{sF"`
 
-#### **Step 6 - FTP**
+#### **Step 7 - FTP**
 
 We know that the ports 21 and 22 are open. Those ports run respectively a ftp server and an ssh server. The credentials `lmezard | G!@M6f4Eatau{sF"` gives us access to the session of lmezard on the VM and on the ftp, but not on ssh. 
 
@@ -316,7 +316,7 @@ local: fun remote: fun
 
 ```
 
-#### **Step 6 - fun Challenge**
+#### **Step 8 - fun Challenge**
 
 First, we look closely the **fun** file. When we cat it, the output is really messy and gives us very few clues on how to solve the channel, except a main function telling us we should find a password of 12 characters and execute a shasum256 on it.
 
@@ -453,7 +453,7 @@ We have what we were looking for, we now know that the first character of the pa
 330b845f32185747e4f8ca15d40ca59796035c89ea809fb5d30f4da83ecf45a4`.
 
  
-#### **Step 7 - SSH (laurie)**
+#### **Step 9 - SSH (laurie)**
 
 We connect to ssh with those credentials : `laurie | 330b845f32185747e4f8ca15d40ca59796035c89ea809fb5d30f4da83ecf45a4`. Once again we have two files, a README and a binary called **bomb**.
 
@@ -991,7 +991,7 @@ Intuitively, we can try to order them in descending order (as the fourth node ha
 
 Thus, the ssh password `Publicspeakingisveryeasy.126241207201b2149opekmq426135`
 
-#### **Step 8 - SSH (thor)**
+#### **Step 10 - SSH (thor)**
 
 Connecting with the user `thor` via ssh, we once again have two files at our disposal. A **README** and a file named **turtle**.
 
@@ -1090,7 +1090,7 @@ t.backward(200)
 ```
 We can test this script on this [website](https://www.codetoday.co.uk/code). It seems that the word we should find is `SLASH`. The issue is that this password is not the right one to connect with `zaz` via ssh. Reading the last lines of turtle once again, we notice the word `digest`, like in `Message Digest Algorithm 5`. The md5 hash of `SLASH` is `646da671ca01bb5d84dbb5fb2238dc8e`. 
 
-#### **Step 9 - SSH (zaz)**
+#### **Step 11 - SSH (zaz)**
 
 Once connected to zaz via ssh, we discover a directory named `mail` and a binary called `exploit_me`. Unless I am mistaken, the `mail` directory won't be useful this time. Let's have a look at `exploit_me`.
 
