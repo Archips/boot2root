@@ -9,6 +9,7 @@ Starting the project, all we have is an `.iso`. Set the network's vm as host onl
 ## Walkthrough
 
  1. [**Walkthrough 1**](https://github.com/Archips/boot2root/blob/main/Walkthrough1.md)
+ 2. [**Walkthrough 2**](https://github.com/Archips/boot2root/blob/main/Walkthrough2.md)
 
 ## Helpful tools
 
