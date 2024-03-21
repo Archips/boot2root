@@ -381,5 +381,10 @@ uid=0(root) gid=0(root) groups=0(root)
 
 And we're finally **root** !
 
+## **RESOURCES**
+
+1. [**Dirty Cow doc**](https://www.cs.toronto.edu/~arnold/427/18s/427_18S/indepth/dirty-cow/index.html/)
+2. [**DirtyCow.c**](https://github.com/firefart/dirtycow)
+
 
 
