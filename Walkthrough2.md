@@ -14,7 +14,7 @@ Thanks to the first walkthrough, we can now to connect via ssh with three users,
 
 Now that we have remote access to those three users, we can enumerate their system in order to find some exploitation clues.
 
-- **Hostname**
+- **hostname**
 
 This command returns the hostname of the target machine. Usually useless but it can sometimes provide information about the role of the target in a corporate network.
 
@@ -25,7 +25,7 @@ BornToSecHackMe
 
 - **uname -a**
 
-This command display system information such as details about the kernel used by the system. This could be useful, we cna check if this kernel version is vulnerable to privilege escalation. 
+This command display system information such as details about the kernel used by the system. This could be useful, we can check if this kernel version is vulnerable to privilege escalation. 
 
 ```
 zaz@BornToSecHackMe:~$ uname -a
@@ -179,6 +179,24 @@ Find specific file permissions:
 Unfortunately nothing of those "basics" steps gives us really interesting except `uname -a`.
 
 Indeed, this command gives us the kernel running on the target machine, `3.2.0-91-generic-pae`. Searching through known exploit, we find the **CVE-2016-5195** best known as dirty cow.
+
+## **DIRTY COW**
+
+This Linux kernel allows processes to write to read only files. Indeed some kernel functions handle the copy-on-write feature of memory mappings, combined with a race condition we can exploit that to become root.
+
+This exploit works like this. First, we create a copy of the read only file we want to write to. This copy will be a private copy of the read only file. We want a copy because we don't have access to the physical memory at our user level, so we won't be able to change any file located there. So we ask the kernel to create for us a private mapping of the file on our virtual memory, it will be done using `mmap`.
+
+To save resources and space, we will get the reference but not the copy until we really write to the copy of the file. But instead the read only file will get marked as `copy on write`. It means that the file will be copied only when we will actually write to it.
+
+Now we want to write to our private mapping. But we won't directly write to the virtual address given by `mmap`, we will write to the file `proc/self/mem` which is the representation of the our `dirty_cow.c` program virtual memory. We're doing that because the vulnerability sits in the way our kernel process-to-process virtual memory access is implemented.
+
+Now the kernel has to find where in the physical memory he should write. Finding that the read only file we want to write to is marked `copy on write`, the copy of the file is finally made and the kernel knows now where he should write. At this point it knows the location but hasn't write anything, because `write` has to steps, first locate the physical address and then write to that address. 
+
+We will take advantages from that and use `mdavise` between those two steps. We will advise the kernel that we don't need anymore our private mapping.
+
+When the second step of `write` happens, the kernel is tricked and thinks the function was aimed to write to the original read only file and actually does it.
+
+Our goal is to get root, so the read only file we will write to is /etc/passwd. We will create a new user, called `root` with a password we''ll choose, give him root permissions and write "its credentials" to the file. That's being made, we will be able to get root.
 
 ## **EXPLOITATION**
 
@@ -383,7 +401,7 @@ And we're finally **root** !
 
 ## **RESOURCES**
 
-1. [**Dirty Cow doc**](https://www.cs.toronto.edu/~arnold/427/18s/427_18S/indepth/dirty-cow/index.html/)
+1. [**Dirty Cow doc**](https://www.cs.toronto.edu/~arnold/427/18s/427_18S/indepth/dirty-cow/index.html)
 2. [**DirtyCow.c**](https://github.com/firefart/dirtycow)
 
 
