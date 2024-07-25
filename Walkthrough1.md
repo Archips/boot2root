@@ -17,9 +17,11 @@ vboxnet0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 ```
 
-*inet 192.168.56.1  netmask 255.255.255.0  broadcast 192.168.56.255* gives us the IP address of the virtual machine.
+*inet 192.168.56.1  netmask 255.255.255.0  broadcast 192.168.56.255* gives us the range of IP addresses that thr virtual machine could be in.
 
-Now we got this, we can use **nmap** to map the network and find out which ports are open. Exploring the network will permit us to find potential vulnerabilities that will help us become root. 
+To find the actual IP of the boot2root VM, we can do `nmap 192.168.56.1-255`. If will check all the IP addresses in that range until it finds one that responds.
+
+Now that we have the IP, we can use **nmap** to map the network and find out which ports are open. Exploring the network will permit us to find potential vulnerabilities that will help us become root. 
 
 The exact command we use is `nmap -sV <TARGET IP ADDRESS>`
 
@@ -60,27 +62,27 @@ Nmap done: 256 IP addresses (2 hosts up) scanned in 17.45 seconds
 Now that we have a detailed description of the target network, we should look for known vulnerabilities for each service and each version of the service. To do so, we can use **exploit-db** and **github**, two useful resources in  infosec. 
 
 - **FTP**: 
-	- FTP sends **data unencrypted**. If we intercept the network traffic, we can read, modify, or steal files and passwords.
-	- Using **hydra** and knowing a username, we can **brute force** the according password if the password policy is weak.
+	- FTP sends **unencrypted data**. If we intercept the network traffic, we can read, modify, or steal files and passwords.
+	- Using **hydra** and knowing a username, we can **brute force** that password if the password policy is weak.
 	- If the server is **misconfigured**, we can sometimes access some files using the username `anonymous` and a blank password.
 - **SSH**:
 	- Thanks to the [**CVE2018-15473**](https://github.com/Sait-Nuri/CVE-2018-15473) (*# OpenSSH 2.3 < 7.7 - Username Enumeration*), we know that the server gave different response for a valid or an invalid username.
-	- In the same idea as for a ftp server, using **hydra** and knowing a username, we can try to **brute force** the according password.
+	- In the same idea as for a ftp server, using **hydra** and knowing a username, we can try to **brute force** the password.
 - **HTTP/S**:
 	- ***SQL Injection*** 
-		- Injection allows an attacker to alter backend SQL statement by manipulating the user supplied data. It occurs when the user input is not properly sanitized and sent to interpreter as part of command and trick the interpreter into executing unintended commands and gives access to unauthorized data. 
-		- It can lead to multiple implication. An attacker can inject malicious content into the vulnerable fields. If so, sensitive data like usernames, passwords, etc. can be read from the database. More over database data can be modified (insert/update/delete).
+		- Injection allows an attacker to alter backend SQL statement by manipulating the user supplied data. It occurs when the user input is not properly sanitized and sent to the interpreter as part of a command to trick the interpreter into executing unintended commands, which gives access to unauthorized data. 
+		- It can lead to multiple implications. An attacker can inject malicious content into the vulnerable fields. If so, sensitive data like usernames, passwords, etc. can be read from the database. More over, database data can be modified (insert/update/delete).
 
 	-  ***Cross Site (XSS)***
-		- XSS target scripts embedded in a page that are executed on the client side rather then at the server side. It occurs when the application takes untrusted data and send it to the web browser  without proper validation. 
-		- The attacker can use this vulnerability to execute malicious code scripts via the browser. Since the latter can't know if the script is trusty or not, it will execute it. The attacker can hijack session cookies, deface the vulnerable website or even redirect the user to an unwanted and malicious sites.
+		- XSS target scripts embedded in a page that are executed on the client side rather then on the server side. It occurs when the application takes untrusted data and sends it to the web browser without proper validation. 
+		- The attacker can use this vulnerability to execute malicious code scripts via the browser. Since the latter can't know if the script is trustworthy or not, it will execute it. The attacker can hijack session cookies, deface the vulnerable website or even redirect the user to an unwanted and malicious sites.
 		
 	-  ***Broken Authentication***
-		- When a user website session is ended, either by logout or browser closed abruptly, the corresponding session cookie and session ID should be invalidated. Each session should have a new cookie, indeed cookies contain sensitive data, like username, password, etc.. If cookies are not invalidated, the sensitive data will remain on the system.
-		- If an attacker find that kind of vulnerabilities, he could gain access to another user's account, using a brute force attack, the use of weak credentials or a weak session cookies.
+		- When a user website session is ended, either by logging out or the browser closing abruptly, the corresponding session cookie and session ID should be invalidated. Each session should have a new cookie: indeed, cookies contain sensitive data, like username, password, etc.. If cookies are not invalidated, the sensitive data will remain on the system.
+		- If an attacker finds that kind of vulnerability, he could gain access to another user's account, using a brute force attack, the use of weak credentials or a weak session cookies.
 		
 	-  ***Broken Access Control (IDOR)***
-		- Some website's pages should be hidden from regular visitors. For instance, only the admin user should have access to a page that access others users. In the same idea, user should not have access to the account of other users. If so, it's a broken access control vulnerability. A regular user could access sensitive data from other regular users and access unauthorized functionalities.
+		- Some websites' pages should be hidden from regular visitors. For instance, only the admin user should have access to a page that accesses others users' information. In the same idea, a user should not have access to the account of other users. If so, it's a broken access control vulnerability. A regular user could access sensitive data about other regular users and access unauthorized functionalities.
 		
 	-  ***Security Misconfiguration***
 		- Misconfiguration of permissions on cloud services.
@@ -89,7 +91,7 @@ Now that we have a detailed description of the target network, we should look fo
 		- Overly detailed error messages giving critical system information to the attackers. 
 	-  ***Security Misconfiguration***
 		- A cryptographic failure is a vulnerability that happens when a cryptographic algorithm protecting sensitive information is misused (or worse, nonexistent). This vulnerability often cause web application divulging sensitive data, as customers data (names, dates of birth, financial information) or technical data such as usernames and passwords.
-		- For instance, when you accessing a banking application via your browser, you wanna be sure that the communication between the client (your browser) and the server is encrypted. If it's not the case, an attacker could capture your network packets, and see your data plain-text, capturing sensitive information about you and your financial data.
+		- For instance, when you access a banking application via your browser, you want to be sure that the communication between the client (your browser) and the server is encrypted. If that's not the case, an attacker could capture your network packets and see your data as plain-text, capturing sensitive information about you and your financial data.
 		
 -  **SSL/IMAP**: 
 	- Internet Message Access Protocol enables user to access their email messages remotely through an internet connection. In substance, emails are kept on a server and not (always) stored on personal device. 
@@ -97,7 +99,7 @@ Now that we have a detailed description of the target network, we should look fo
 
 ## Service Information:
 
-Following the nmap scan, we know that the following ports are open, we also know the version of the service their running.
+Following the nmap scan, we know that the following ports are open, we also know the version of the service they're running.
 
 - **FTP Service (Port 21):** vsftpd 2.0.8 or later
 - **SSH Service (Port 22):** OpenSSH 5.9p1 Debian 5ubuntu1.7
@@ -113,33 +115,7 @@ Following the nmap scan, we know that the following ports are open, we also know
 
 Since the ports 80 and 443 are opened, we can brute force directories using **gobuster**.
 - -dir stands for directory, meaning we want to scan directories
-- -k means that we want to skip the ssl verification (this flag will be useful when brute forcing the htpps server)
-```
-┌──(kali㉿kali)-[~]
-└─$ gobuster dir --wordlist=/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt --url=192.168.56.103    
-===============================================================
-Gobuster v3.6
-by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
-===============================================================
-[+] Url:                     http://192.168.56.103
-[+] Method:                  GET
-[+] Threads:                 10
-[+] Wordlist:                /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt
-[+] Negative Status codes:   404
-[+] User Agent:              gobuster/3.6
-[+] Timeout:                 10s
-===============================================================
-Starting gobuster in directory enumeration mode
-===============================================================
-/forum                (Status: 403) [Size: 287]
-/fonts                (Status: 301) [Size: 316] [--> http://192.168.56.103/fonts/]
-/server-status        (Status: 403) [Size: 295]
-Progress: 220560 / 220561 (100.00%)
-===============================================================
-Finished
-===============================================================
-
-```
+- -k means that we want to skip the ssl verification (this flag will be useful when brute forcing the https server)
 
 ```
 ┌──(kali㉿kali)-[~]
@@ -170,7 +146,7 @@ Finished
 
 #### **Step 2 - /forum**
 
-That first page gives us several logins:
+Visiting that first page, `https://192.168.56.103/forum`, gives us several usernames:
 - quedevide
 - thor
 - wandre
@@ -178,15 +154,15 @@ That first page gives us several logins:
 - zaz
 - admin
  
-On the first page there's a post called **Probleme Login ?** by **lmezard**. Sounds interesting. Looking closely, we see this : ```Oct 5 08:45:29 BornToSecHackMe sshd[7547]: Failed password for invalid user !q\]Ej?*5K5cy*AJ from 161.202.39.38 port 57764 ssh2```.  The end of the line mention ssh daemon, let's try to connect through ssh with the credentials we've just found. Unfortunately it doesn't work. However those credentials give us access to the account of lmezard.
+On the first page, there's a post called **Probleme Login ?** by **lmezard**. Sounds interesting. Looking closely, we see this : ```Oct 5 08:45:29 BornToSecHackMe sshd[7547]: Failed password for invalid user !q\]Ej?*5K5cy*AJ from 161.202.39.38 port 57764 ssh2```.  The end of the line mentions ssh daemon, let's try to connect through ssh with the credentials we've just found. Unfortunately, it doesn't work. However, those credentials give us access to the forum account of lmezard.
 
 #### **Step 3 - lmezard account**
  
-Once connected to the forum with the following credentials `lmezard | !q\]Ej?*5K5cy*AJ` we can access the user area, where we discover the email address (an thus the first name) of lmezard **laurie@borntosec.net**.
+Once connected to the forum with the following credentials `lmezard | !q\]Ej?*5K5cy*AJ`, we can access the user area, where we discover the email address (and thus, the first name) of lmezard **laurie@borntosec.net**.
 
 #### **Step 4 - laurie email account**
 
-Since we got an email, we can visit **/webmail** and try to access the account of laurie with the password we found on the forum. Luckily it works. Reading her email, we find this: 
+Since we got an email, we can visit **/webmail** and try to access laurie's account with the password we found on the forum. Luckily, it works. Reading her email, we find this: 
 
 ```
 From: qudevide@mail.borntosec.net
@@ -203,7 +179,7 @@ This email is pretty useful as it contains credentials to access the database: `
 
 #### **Step 5 - /phpmyadmin**
 
-Once connected on php my admin, we have access to the database, we can modify it, delete or even add thing. We could try to change the password of the admin in order to try to login on his user area on the forum. To do so we can go to the  `forum_db -> mlf2_userdata`, and edit **admin**. Password are hashed, let's hash (md5) a password of our choice, and try to connect on the forum. The hash of `adminpwd` is `0a14de5a76e5e14758b04c209f266726`. We change the current hash by this new one, and connect to the admin account. We now have access to a bunch of new functionalities. Unfortunately none of them will be useful except maybe the email listing of the registered users.
+Once connected on phpmyadmin, we have access to the database, which means that we can modify it, delete or even add something. We could try to change the password of the admin in order to try to login on his user area on the forum. To do so we can go to the `forum_db -> mlf2_userdata`, and edit **admin**. Password are hashed, let's hash (md5) a password of our choice, and try to connect on the forum. The hash of `adminpwd` is `0a14de5a76e5e14758b04c209f266726`. We replace the current hash with this new one, and connect to the admin account. We now have access to a bunch of new functionalities. Unfortunately, none of them will be useful except maybe the email listing of the registered users.
 - admin@borntosec.net
 - qudevide@borntosec.net
 - thor@borntosec.net
@@ -215,14 +191,14 @@ Once connected on php my admin, we have access to the database, we can modify it
 
 MySQL database can sometimes being vulnerable to SQL Injection to execute arbitrary commands. 
 	
-An SQL Injection allows an attacker to  add logical expressions and additional commands to an existing SQL Query. It's possible when the user input data in not properly validated by an application. For instance :
+An SQL Injection allows an attacker to add logical expressions and additional commands to an existing SQL Query. It's possible when the user inputs data in not properly validated by an application. For instance :
 ```$sql_query = "select * from users where user='$user' and password='$pass'"``` is used to validate user login requests. If the user submitted data is not properly sanitized, it's possible to pass through the login step with specially crafted values. For example, if we change the value '$user' by **'admin' or '1'='1'**, the attacker we pass the login screen because **or '1'='1'** is always true, ignoring the value of the password.
 
-Using that technique we can writing arbitrary files, reading arbitrary files or even get a **webshell**.
+Using that technique we can start writing arbitrary files, reading arbitrary files or even get a **webshell**.
 
 Navigating through **/myphpadmin**, we notice clicking on the tab **SQL** that we can run a sql query on the server.
 
-Let's craft our webshell. First we have to find a directory with write permission in order to create a file, in this case a webshell php script. Let's try the common ones (temporary directories used by popular CMS) :
+Let's craft our webshell. First we have to find a directory with write permissions in order to create a file, in this case a webshell php script. Let's try the common ones (temporary directories used by popular CMS) :
 
 	-   https://192.168.56.103/forum/templates_compiled/
 	-   https://192.168.56.103/forum/templates_c/
@@ -249,7 +225,7 @@ Altogether we have:
 
 We can now access our webshell using this url : **https://192.168.56.103/forum/templates_c/php_shell.php**
 
-To execute command, we can append `?cmd=CMD` to the url, keeping in my it has to be formatted for an url, we can then use a url encoder to have the right format.
+To execute a command, we can append `?cmd=CMD` to the url, keeping in mind it has to be formatted for an url (we can then use a url encoder to have the right format.)
 
 First, let's see where we are:
 
@@ -277,7 +253,7 @@ The content of **password** is finally displayed. We got `lmezard:G!@M6f4Eatau{s
 
 #### **Step 7 - FTP**
 
-We know that the ports 21 and 22 are open. Those ports run respectively a ftp server and an ssh server. The credentials `lmezard | G!@M6f4Eatau{sF"` gives us access to the session of lmezard on the VM and on the ftp, but not on ssh. 
+We know that the ports 21 and 22 are open. Those ports run respectively a ftp server and an ssh server. The credentials `lmezard | G!@M6f4Eatau{sF"` gives us access to lmezard's session on the VM and on the ftp, but not on ssh. 
 
 On the boot2root session we find 2 interesting files, one called README, telling us that we should complete a challenge to obtain the password of 'laurie' in order to connect via ssh, and the other one seems to list pcap files. It will be difficult for us to complete the challenge directly on the VM. 
 
