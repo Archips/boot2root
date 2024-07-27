@@ -356,9 +356,9 @@ In this case, a good start would have been to directly use the command `file`.
 fun: POSIX tar archive (GNU)
 ```
 
-We decompress the archive with the command `tar -xf fun -C .`. We now have a directory named **ft_fun** containing  a lot of pcap files. Unfortunately, (I don't really know why), wireshark refuses to open them.
+We decompress the archive with the command `tar -xf fun -C .`. We now have a directory named **ft_fun** containing  a lot of pcap files. Unfortunately, wireshark refuses to open them because they aren't really .pcap files.
 
-We've seen in the pseudo main that there's a function `getme` which seems responsible to get the characters we're looking for. We try to grep `getme` with the .pcap files we have.
+We've seen in the pseudo main that there's a function `getme` which seems to be responsible for getting the characters we're looking for. We try to grep `getme` with the .pcap files we have.
 
 ```
 ┌──(kali㉿kali)-[~/ft_fun]
