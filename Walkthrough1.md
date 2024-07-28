@@ -431,7 +431,7 @@ We have what we were looking for, we now know that the first character of the pa
  
 #### **Step 9 - SSH (laurie)**
 
-We connect to ssh with those credentials : `laurie | 330b845f32185747e4f8ca15d40ca59796035c89ea809fb5d30f4da83ecf45a4`. Once again we have two files, a README and a binary called **bomb**.
+We connect to ssh with those credentials: `laurie | 330b845f32185747e4f8ca15d40ca59796035c89ea809fb5d30f4da83ecf45a4`. Once again, we have two files: a README and a binary executable file called **bomb**.
 
 The README contains this :
 
@@ -572,9 +572,13 @@ End of assembler dump.
 ```
 We notice that we have 6 phases, there's a `readline` taking the user input, if the input is correct we jump to the next phase, if the not the bomb blows up. 
 
+Let's leave GDB behind for now and do static code analysis with Ghidra. Ghidra can also translate assembly code into C, which will be more readable for us.
+
 **PHASE 1**: 
 
-```
+Let's take a look at the phase_1 with Ghidra:
+
+```C
 void phase_1(undefined4 param_1)
 
 {
@@ -592,7 +596,7 @@ The answer of this phase is pretty obvious : **Public speaking is very easy.**.
 
 **PHASE 2**:
 
-```
+```C
 void phase_2(undefined4 param_1)
 
 {
@@ -613,9 +617,9 @@ void phase_2(undefined4 param_1)
   return;
 }
 ```
-We can suppose that the answer will be six numbers. The first if statement learns us the first number should be a **1**. As for the do while loop, we can read that the values in our number's array times the index + 1 should be equaled to the next value in the array. That gives us:
+We can suppose that the answer will be six numbers. The first if statement shows us that the first number should be a **1**. As for the do while loop, we can see that the values in our number's array times the index + 1 should be equal to the next value in the array. That gives us:
 
-```
+```C
 -> i = 0 | array[0] = 1
 array[i] = 1
 array[i] * i + 1 = array[i + 1] <=> array[0] * 2 = 2
@@ -644,7 +648,7 @@ Thus, the answer for the phase 2 is: **1 2 6 24 120 720**
 
 **PHASE 3**:
 
-```
+```C
 void phase_3(char *param_1)
 
 {
@@ -728,7 +732,7 @@ It worth noting that every combination of the switch statement gives us access t
 
 **PHASE 4**:
 
-```
+```C
 void phase_4(char *param_1)
 
 {
@@ -764,54 +768,43 @@ int func4(int param_1)
 }
 ```
 
-So far, the only thing we know is that we have to find an int, when passed to the function `func4` the return of this latter should be equal to 55 (0x37 or '7').
+So far, the only thing we know is that we have to find an int, when passed to the function `func4` the return of this latter should be equal to 0x37 (or 55 decimal).
 
-Let's rewrite those two in c.
+Digging a little further, we can understand that `func4` is a recursive function that calculates the Fibonacci sequence, which is defined as:
+- func4(0) = 1
+- func4(1) = 1
+- func4(n) = func4(n-1) + func4(n-2) for n >= 2
 
-```
-int func4(int nb) {
+This means that we have to determine the smallest integer n such that the nth Fibonacci number is 55.
 
-        int var1;
-        int var2;
-        if (nb < 2) {
+To do this, we can go through the Fibbonacci numbers iteratively in a small python script:
 
-                var2 = 1;
-        }
-        else {
-                var1 = func4(nb - 1);
-                var2 = func4(nb - 2);
-                var2 += var1;
-        }
-        return (var2);
-}
+```python
+def fibonacci(n):
+    if n == 0 or n == 1:
+        return 1
+    a, b = 1, 1
+    for _ in range(2, n + 1):
+        a, b = b, a + b
+    return b
 
-void phase_4(void) {
-
-        int v1;
-        int v2;
-        v1 = scanf("%d", &v2);
-        if (v1 != 1 || v2 < 1)
-        {
-                printf("error len %d\n", v1);
-                printf("%d is FALSE\n", v2);
-                return;
-        }
-        v1 = func4(v2);
-        if (v1 != 0x37) 
-        {
-                printf("%d is FALSE\n", v2);
-                return;
-        }
-        printf("%d is the right number\n", v2);
-        return;
-}
+def find_phase_4_solution():
+    target_value = 0x37 # = 55 in decimal
+    n = 0
+    while True:
+        fib_n = fibonacci(n)
+        if fib_n == target_value:
+            return n
+        elif fib_n > target_value:
+            return None
+        n += 1
 ```
 
-Trying the program with different values, we finally find the one, **9**
+If we pass a `target_value` of 55 to our function, we get the answer **9**.
 
 **PHASE 5**:
 
-```
+```C
 void phase_5(int param_1)
 
 {
@@ -837,11 +830,13 @@ void phase_5(int param_1)
 }
 ```
 
-Further exploration in Ghidra gives us one more clue, `array.123` value is `"isrveawhobpnutfg"`. It looks like we have a kind of corresponding table.
+Our goal here is to find a string of 6 characters that maps to the string "giants".
 
-Rewriting this code, we got :
+Further exploration in Ghidra gives us one more clue, `array.123` value is `"isrveawhobpnutfg"`. It looks like we have a kind of lookup table.
 
-```
+Rewriting this code, we get :
+
+```C
 void phase_5() {
         char line[6];
         char *key = "giants";
@@ -864,17 +859,38 @@ void phase_5() {
 }
 ```
 
-The program gives us four possibilities, 
+In Python, we can solve it this way:
+```python
+lookup_table = "isrveawhobpnutfg"
+
+def find_phase_5_solution():
+    target = "giants"
+    possible_solutions = [[] for _ in range(6)]
+
+    # Collect all possible characters for each position in the target string
+    for i in range(6):
+        for c in range(ord('a'), ord('z') + 1):
+            transformed_char = lookup_table[c & 0xf]
+            if transformed_char == target[i]:
+                possible_solutions[i].append(chr(c))
+
+    # Generate all permutations of possible solutions
+    # with itertools carthesian product of iterables
+    all_solutions = list(product(*possible_solutions))
+    return [''.join(solution) for solution in all_solutions]
+```
+
+Either way, the program gives us four possibilities, 
 	- `opekmq`
 	- `opekma`
 	- `opukma`
 	- `opukmq`
 
-Like for the phase 3, we'll have to find the right combination for the final password.
+Just like in phase 3, any one of these work to pass the phase, but we'll have to find the right combination for the final password.
 
 **PHASE 6**:
 
-```
+```C
 void phase_6(undefined4 param_1)
 
 {
@@ -935,7 +951,9 @@ void phase_6(undefined4 param_1)
 }
 ```
 
-Once again, digging in Ghidra, we notice 6 variables, from node1 to node6. Then, using gdb we got:
+As we can see with the call to the `read_six_numbers()` function, the answer must be a sequence of 6 numbers. We can also see that each one of those six numbers must be between 1 and 6 (inclusive) and there can be no duplicates, otherwise the bomb explodes.
+
+Once again, digging in Ghidra, we notice 6 variables, from node1 to node6. We can't see the values in these variables, though. But if we take a closer look using gdb, we get:
 
 ```
 (gdb) print (int)node1
@@ -952,9 +970,9 @@ $5 = 212
 $6 = 432
 ```
 
-Recall that the last hint is a '4', meaning that the answer begins with a '4' and that the value of each node are not included in the answer, but their index are.
+We'll recall that the last hint in README is a '4', meaning that the answer begins with a '4'. Since the answer is a sequence of 6 numbers between 1 and 6, we know the value of each node is not included in the answer, but the index is.
 
-Intuitively, we can try to order them in descending order (as the fourth node has the biggest value) : `4 2 6 3 1 5`. And it actually works.
+Intuitively, we can try to order them in descending order (since the fourth node has the biggest value) : `4 2 6 3 1 5`. And it actually works.
 
 **RECAP PHASE 6**:
 
@@ -965,7 +983,16 @@ Intuitively, we can try to order them in descending order (as the fourth node ha
 5. `opekmq`
 6. `4 2 6 3 1 5`
 
-Thus, the ssh password `Publicspeakingisveryeasy.126241207201b2149opekmq426135`
+If we try this, the password will be wrong. In the Boot2root subject, it is stated that:
+
+```
+For the part related to a (bin) bomb: If the password found is
+123456. The password to use is 123546.
+```
+
+Meaning that we need to invert a couple of digits in the phase 6 answer: `4 2 6 3 1 5` -> `4 2 6 1 3 5`
+
+Thus, the ssh password for user `thor` is `Publicspeakingisveryeasy.126241207201b2149opekmq426135`
 
 #### **Step 10 - SSH (thor)**
 
