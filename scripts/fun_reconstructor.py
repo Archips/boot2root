@@ -1,6 +1,7 @@
 import os
 import re
 import subprocess
+import hashlib
 
 
 def extract_file_index(content):
@@ -60,8 +61,14 @@ def execute_program(executable_file):
         print(f"Program output:\n{result.stdout}")
         if result.stderr:
             print(f"Program errors:\n{result.stderr}")
+        return result.stdout.strip()
     except Exception as e:
         print(f"Execution failed: {e}")
+        return None
+
+
+def sha256_hash(text):
+    return hashlib.sha256(text.encode()).hexdigest()
 
 
 if __name__ == "__main__":
@@ -74,4 +81,12 @@ if __name__ == "__main__":
     save_program(cleaned_program, source_file)
 
     compile_program(source_file, executable_file)
-    execute_program(executable_file)
+    program_output = execute_program(executable_file)
+
+    if program_output:
+        match = re.search(r"MY PASSWORD IS: (\w+)", program_output)
+        if match:
+            password = match.group(1)
+            print(f"Extracted password: {password}")
+            sha256 = sha256_hash(password)
+            print(f"SHA-256 hash: {sha256}")
