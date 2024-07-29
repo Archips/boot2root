@@ -2,7 +2,7 @@
 
 # **Boot2root - Walkthrough2**
 
-Thanks to the first walkthrough, we can now to connect via ssh with three users, Laurie (lmezard), Thor and Zaz. We can proceed to the enumeration of the system. 
+Thanks to the first walkthrough, we can now connect via ssh with three users, Laurie (lmezard), Thor and Zaz. We can proceed to the enumeration of the system. 
 
 ## **SSH LOGIN CREDENTIALS**
 
@@ -16,7 +16,7 @@ Now that we have remote access to those three users, we can enumerate their syst
 
 - **hostname**
 
-This command returns the hostname of the target machine. Usually useless but it can sometimes provide information about the role of the target in a corporate network.
+This command returns the hostname of the target machine. It's usually useless, but it can sometimes provide information about the role of the target in a corporate network.
 
 ```
 zaz@BornToSecHackMe:~$ hostname
@@ -25,7 +25,7 @@ BornToSecHackMe
 
 - **uname -a**
 
-This command display system information such as details about the kernel used by the system. This could be useful, we can check if this kernel version is vulnerable to privilege escalation. 
+This command displays system information such as details about the system kernel. This could be useful: we can check if this kernel version is vulnerable to privilege escalation. 
 
 ```
 zaz@BornToSecHackMe:~$ uname -a
@@ -43,7 +43,7 @@ Linux version 3.2.0-91-generic-pae (buildd@lgw01-15) (gcc version 4.6.3 (Ubuntu/
 
 - **env**
 
-The env command shows environmental variables. For instance, the PATH variable could have a compiler or a scripting language that we can use to run some code in order to escalate the target's system privilege.
+The env command shows environmental variables. For instance, the PATH variable could have a compiler or a scripting language that we can use to run some code in order to escalate our privileges on the target system.
 
 ```
 zaz@BornToSecHackMe:~$ env
@@ -136,11 +136,11 @@ postfix:x:110:118::/var/spool/postfix:/bin/false
 
 - **history**
 
-Looking at the commands executed earlier can give us clues about the target system but also, if we're lucky, information has passwords or usernames.
+Looking at the commands executed earlier can give us clues about the target system but also, if we're lucky, that information might contain passwords or usernames.
 
 - **find**
 
-Find is a very useful command, used with the right flags we can discover very interesting files. For instance :
+Find is a very useful command, and, used with the right flags, we can discover very interesting files. For instance:
 
 (Generic examples)
 
@@ -176,33 +176,33 @@ Find specific file permissions:
     find / -perm -u=s -type f 2>/dev/null: Find files with the SUID bit, which allows us to run the file with a higher privilege level than the current user. 
 
 
-Unfortunately nothing of those "basics" steps gives us really interesting except `uname -a`.
+Unfortunately none of these "basics" steps give us anything really interesting except `uname -a`.
 
-Indeed, this command gives us the kernel running on the target machine, `3.2.0-91-generic-pae`. Searching through known exploit, we find the **CVE-2016-5195** best known as dirty cow.
+Indeed, this command gives us the kernel running on the target machine, `3.2.0-91-generic-pae`. Searching through known exploits, we find the **CVE-2016-5195**, best known as dirty cow.
 
 ## **DIRTY COW**
 
-This Linux kernel allows processes to write to read only files. Indeed some kernel functions handle the copy-on-write feature of memory mappings, combined with a race condition we can exploit that to become root.
+This Linux kernel allows processes to write to read-only files. Indeed, some kernel functions handle the copy-on-write feature of memory mappings, combined with a race condition we can exploit that to become root.
 
-This exploit works like this. First, we create a copy of the read only file we want to write to. This copy will be a private copy of the read only file. We want a copy because we don't have access to the physical memory at our user level, so we won't be able to change any file located there. So we ask the kernel to create for us a private mapping of the file on our virtual memory, it will be done using `mmap`.
+The exploit works like this. First, we create a copy of the read-only file we want to write to. This copy will be a private copy of the read only file. We want a copy because we don't have access to the physical memory at our user level, so we won't be able to change any file located there. So we'll ask the kernel to create a private mapping of the file for us on our virtual memory. It will be done using `mmap`.
 
-To save resources and space, we will get the reference but not the copy until we really write to the copy of the file. But instead the read only file will get marked as `copy on write`. It means that the file will be copied only when we will actually write to it.
+To save resources and space, we will get the reference but not the copy until we really write to the copy of the file. Instead, the read-only file will get marked as `copy on write`. It means that the file will be copied only when we will actually write to it.
 
-Now we want to write to our private mapping. But we won't directly write to the virtual address given by `mmap`, we will write to the file `proc/self/mem` which is the representation of the our `dirty_cow.c` program virtual memory. We're doing that because the vulnerability sits in the way our kernel process-to-process virtual memory access is implemented.
+Now we want to write to our private mapping. But we won't directly write to the virtual address given by `mmap`, we will write to the file `proc/self/mem` which is the representation of the our `dirty_cow.c` program's virtual memory. We're doing that because the vulnerability sits in the way our kernel's process-to-process virtual memory access is implemented.
 
-Now the kernel has to find where in the physical memory he should write. Finding that the read only file we want to write to is marked `copy on write`, the copy of the file is finally made and the kernel knows now where he should write. At this point it knows the location but hasn't write anything, because `write` has to steps, first locate the physical address and then write to that address. 
+Now the kernel has to find where in the physical memory it should write. Finding that the read-only file we want to write to is marked `copy on write`, the copy of the file is finally made and the kernel knows now where it should write. At this point it knows the location but hasn't write anything, because `write` has two steps, first locate the physical address, and then write to that address. 
 
-We will take advantages from that and use `mdavise` between those two steps. We will advise the kernel that we don't need anymore our private mapping.
+We will take advantage of that and use `mdavise` between those two steps. We will advise the kernel that we don't need our private mapping anymore.
 
-When the second step of `write` happens, the kernel is tricked and thinks the function was aimed to write to the original read only file and actually does it.
+When the second step of `write` happens, the kernel is tricked and thinks the function was meant to write to the original read-only file, and actually does it.
 
-Our goal is to get root, so the read only file we will write to is /etc/passwd. We will create a new user, called `root` with a password we''ll choose, give him root permissions and write "its credentials" to the file. That's being made, we will be able to get root.
+Our goal is to get root, so the read only-file we will write to is `/etc/passwd`. We will create a new user, called `root` with a password we'll choose, give it root permissions and write its "credentials" to the file. When that's done, we will be able to get root.
 
 ## **EXPLOITATION**
 
-Thanks to this [**exploit**](https://github.com/firefart/dirtycow) we get this `c` code:
+Thanks to this [**exploit**](https://github.com/firefart/dirtycow), we get this `c` code:
 
-```
+```c
 #include <fcntl.h>
 #include <pthread.h>
 #include <string.h>
@@ -368,7 +368,7 @@ int main(int argc, char *argv[])
 }
 ```
 
-We change the value of `const char *salt` and `user.username` to `root` and compile it with the following command `gcc -pthread dirty.c -o exploit -lcrypt`.
+We'll change the value of `const char *salt` and `user.username` to `root` and compile it with the following command `gcc -pthread dirty.c -o exploit -lcrypt`.
 
 ```
 zaz@BornToSecHackMe:~$ ./exploit

