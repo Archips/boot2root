@@ -31,4 +31,5 @@ Starting the project, all we have is an `.iso`. Set the network's vm as host onl
 ## Author
 
 [Archibald Thirion](https://github.com/Archips)  
+[Mia Combeau](https://github.com/mcombeau)  
 
